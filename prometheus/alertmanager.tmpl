@@ -1,0 +1,20 @@
+{{ define "dingtalk.default.title" }}
+告警监控提醒
+{{ end }}
+
+{{ define "dingtalk.default" }}
+### MySQL告警监控
+{{ range .Alerts }}
+- 告警级别：{{ .Labels.severity }}
+- 告警类型：{{ .Labels.alertname }}
+- 告警实例：{{ .Labels.instance }}
+- 告警概述：{{ .Annotations.summary }}
+- 详细信息：{{ .Annotations.description }}
+- 开始时间：{{ .StartsAt }}
+{{ if .EndsAt }}
+- 结束时间：{{ .EndsAt }}
+{{ end }}
+---
+{{ end }}
+{{ end }}
+

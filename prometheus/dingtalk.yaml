@@ -1,0 +1,4 @@
+target: "https://oapi.dingtalk.com/robot/send?access_token=0ef3e8acd1727f9fcd68eb9db39332b93d4eb5aa6a028886b46c8ac6f1300d93"
+message:
+  title: '{{ template "dingtalk.default.title" . }}'
+  text: '{{ template "dingtalk.default" . }}'

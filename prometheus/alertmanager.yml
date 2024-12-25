@@ -1,0 +1,17 @@
+global:
+  resolve_timeout: 1m
+
+templates:
+  - "/etc/alertmanager/template/*.tmpl"
+
+route:
+  receiver: "dingtalk-webhook"
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+
+receivers:
+  - name: "dingtalk-webhook"
+    webhook_configs:
+      - url: "http://prometheus-webhook-dingtalk:8060/dingtalk/webhook/send"
+        send_resolved: true

@@ -1,0 +1,72 @@
+groups:
+  - name: mysql-replication-alerts
+    rules:
+      # 监控从库 IO 线程状态
+      - alert: SlaveIOThreadStopped
+        expr: mysql_slave_status_slave_io_running{job="mysql_slave"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL从库IO线程停止"
+          description: "实例 {{ $labels.instance }} 的IO线程已停止，请检查网络连接和复制账号权限"
+
+      # 监控从库 SQL 线程状态
+      - alert: SQLThreadStopped
+        expr: mysql_slave_status_slave_sql_running{job="mysql_slave"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL从库SQL线程停止"
+          description: "实例 {{ $labels.instance }} 的SQL线程已停止，可能存在复制错误，请检查错误日志"
+
+      # 监控复制错误
+      - alert: ReplicationError
+        expr: mysql_slave_status_last_io_errno{job="mysql_slave"} > 0 or mysql_slave_status_last_sql_errno{job="mysql_slave"} > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL复制出现错误"
+          description: '实例 {{ $labels.instance }} 出现复制错误，IO错误号:{{ with query "mysql_slave_status_last_io_errno{instance=''$labels.instance''}" }}{{ . | first | value }}{{ end }}, SQL错误号:{{ with query "mysql_slave_status_last_sql_errno{instance=''$labels.instance''}" }}{{ . | first | value }}{{ end }}'
+
+      # 监控复制延迟（秒级）
+      - alert: ReplicationDelayCritical
+        expr: mysql_slave_status_seconds_behind_master{job="mysql_slave"} > 300
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MySQL主从复制严重延迟"
+          description: "实例 {{ $labels.instance }} 的复制延迟超过5分钟，当前延迟: {{ $value }} 秒"
+
+      # 监控复制延迟（日志位点）
+      - alert: ReplicationLogDelay
+        expr: (mysql_slave_status_master_log_file_pos{job="mysql_slave"} - mysql_slave_status_read_master_log_pos{job="mysql_slave"}) > 1000000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MySQL从库日志落后"
+          description: "实例 {{ $labels.instance }} 的复制日志落后超过1MB，请检查网络带宽和磁盘IO"
+
+      # 监控主从流量差异
+      - alert: MasterSlaveTrafficDiff
+        expr: abs(rate(mysql_global_status_bytes_sent{job="mysql_master"}[5m]) - rate(mysql_global_status_bytes_received{job="mysql_slave"}[5m])) > 1048576
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "主从流量差异过大"
+          description: '主从库之间的流量差异超过1MB/s，主库发送速率:{{ with query "rate(mysql_global_status_bytes_sent{job=''mysql_master''}[5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }}B/s, 从库接收速率:{{ with query "rate(mysql_global_status_bytes_received{job=''mysql_slave''}[5m])" }}{{ . | first | value | printf "%.2f" }}{{ end }}B/s'
+
+      # 监控从库复制过滤规则变更
+      - alert: ReplicationFiltersChanged
+        expr: changes(mysql_slave_status_replicate_do_db{job="mysql_slave"}[1h]) > 0 or changes(mysql_slave_status_replicate_ignore_db{job="mysql_slave"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "复制过滤规则发生变更"
+          description: "实例 {{ $labels.instance }} 的复制过滤规则在过去1小时内发生变更，请确认是否为计划内操作"
