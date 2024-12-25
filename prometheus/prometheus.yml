@@ -1,5 +1,5 @@
 global:
-  scrape_interval: 15s
+  scrape_interval: 10s
 
 rule_files:
   - "alert.rules.yml"
@@ -8,17 +8,26 @@ alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - 'alertmanager:9093' 
+            - "alertmanager:9093"
+      scheme: http
 
 scrape_configs:
-  - job_name: 'mysql_master'
+  - job_name: "prometheus"
     static_configs:
-      - targets: ['mysqld-exporter-master:9104']
-        labels:
-          instance: 'master'
+      - targets: ["localhost:9090"]
 
-  - job_name: 'mysql_slave'
+  - job_name: "mysql_master"
     static_configs:
-      - targets: ['mysqld-exporter-slave:9104']
+      - targets: ["mysqld-exporter-master:9104"]
         labels:
-          instance: 'slave'
+          instance: "master"
+
+  - job_name: "mysql_slave"
+    static_configs:
+      - targets: ["mysqld-exporter-slave:9104"]
+        labels:
+          instance: "slave"
+
+  - job_name: "alertmanager"
+    static_configs:
+      - targets: ["alertmanager:9093"]
